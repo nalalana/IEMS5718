@@ -78,4 +78,3 @@ jobs:
         with:
           app-name: 'IEMS5718'
           slot-name: 'Production'
-          
