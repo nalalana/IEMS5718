@@ -2,7 +2,7 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - IEMS5718
+name: Build and deploy Python app to Azure Web App - iems5718
 
 on:
   push:
@@ -28,10 +28,10 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-
+      
       - name: Install dependencies
         run: pip install -r requirements.txt
-
+        
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
       - name: Zip artifact for deployment
@@ -64,17 +64,18 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_2DBE930D97DF41A4BC6D44158AC4D8D1 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C3F7F2B5942C44F88F449A72D8DF02CA }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_3EE0764EBC1B4B91A0FDB419063D9A64 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B10CD8E499864182B9491A5EE0F67B87 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_87F8EC89ACA646558E55E0751C0D9B88 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A1812EFA9D5748D4BFE4FCC5C943D730 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'IEMS5718'
+          app-name: 'iems5718'
           slot-name: 'Production'
+          
