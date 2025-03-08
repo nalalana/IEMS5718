@@ -51,6 +51,17 @@ nav ul li a {
     border-bottom: 1px solid #ddd;
 }
 
+.sidebar ul li a {
+    color: grey;
+    text-decoration: none;
+}
+
+/* 当前选中的类别 */
+#sidebar-categories a.selected {
+    font-weight: bold;
+    color: black;
+}
+
 .main-content {
     flex-grow: 1;
     padding: 20px;
@@ -77,6 +88,11 @@ nav ul li a {
     margin: 0 auto;
 }
 
+.product a {
+    color: black;
+    text-decoration: none;
+}
+
 .add-to-cart {
     background-color: #28a745;
     color: white;
@@ -99,14 +115,14 @@ nav ul li a {
     overflow: hidden;
     transition: height 0.3s ease-in-out;
     text-align: center;
-    display: block; 
+    display: block;
     white-space: nowrap;
 }
 
 .shopping-cart h2 {
     margin: 0;
     font-size: 16px;
-    line-height: 40px; 
+    line-height: 40px;
 }
 
 .shopping-cart:hover {

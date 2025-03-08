@@ -9,47 +9,23 @@
 <body>
     <header>
         <h1>Dummy Shopping</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="#">Category 1</a></li>
-                <li><a href="#">Category 2</a></li>
-            </ul>
-        </nav>
     </header>
-    
+
     <div class="container">
         <aside class="sidebar">
             <h2>Categories</h2>
-            <ul>
-                <li><a href="#">Category 1</a></li>
-                <li><a href="#">Category 2</a></li>
-                <li><a href="#">Category 3</a></li>
+            <ul id="sidebar-categories">
+                <!-- Categories will be loaded dynamically -->
             </ul>
         </aside>
-        
+
         <main class="main-content">
-            <section class="product-list">
-                <article class="product">
-                    <a href="/static/product.html">
-                        <img src="product1.jpg" alt="Product 1">
-                        <h2>Product 1</h2>
-                    </a>
-                    <p>$10.00</p>
-                    <button class="add-to-cart">Add to Cart</button>
-                </article>
-                <article class="product">
-                    <a href="/static/product.html">
-                        <img src="product2.jpg" alt="Product 2">
-                        <h2>Product 2</h2>
-                    </a>
-                    <p>$15.00</p>
-                    <button class="add-to-cart">Add to Cart</button>
-                </article>
+            <section class="product-list" id="product-list">
+                <!-- Products will be loaded dynamically -->
             </section>
         </main>
     </div>
-    
+
     <aside class="shopping-cart">
         <h2>Shopping List ($2)</h2>
         <ul>
@@ -58,10 +34,103 @@
         </ul>
         <button class="checkout">Checkout</button>
     </aside>
-    
+
     <footer>
         <p>&copy; 2025 Dummy Shopping</p>
     </footer>
+
+    <script>
+        function loadCategories() {
+            fetch('/api/categories/')
+                .then(response => response.json())
+                .then(categories => {
+                    const sidebarCategories = document.getElementById("sidebar-categories");
+
+                    categories.forEach(category => {
+                        // Create sidebar category with product count
+                        let sidebarItem = document.createElement("li");
+                        let sidebarLink = document.createElement("a");
+                        sidebarLink.href = "#";
+                        sidebarLink.textContent = `${category.name}`;
+
+                        // Add click event to update selected category style
+                        sidebarLink.onclick = () => {
+                            loadProducts(category.catid);
+                            selectCategory(sidebarLink);  // Set the clicked category as selected
+                        };
+
+
+                        sidebarItem.appendChild(sidebarLink);
+                        sidebarCategories.appendChild(sidebarItem);
+                    });
+
+                    // Default load the first category's products
+                    if (categories.length > 0) {
+                        const firstCategoryLink = sidebarCategories.querySelector("a"); // Get the first category link
+                        loadProducts(categories[0].catid); // Load the products for the first category
+                        selectCategory(firstCategoryLink); // Set the first category as selected
+                    }
+                })
+                .catch(error => console.error("Error loading categories:", error));
+        }
+
+        // Function to highlight the selected category
+        function selectCategory(selectedLink) {
+            // Remove the 'selected' class from all categories
+            const allLinks = document.querySelectorAll("#sidebar-categories a");
+            allLinks.forEach(link => link.classList.remove("selected"));
+
+            // Add the 'selected' class to the clicked category
+            selectedLink.classList.add("selected");
+        }
+
+        // Fetch and display products for the selected category
+        function loadProducts(catid) {
+            fetch(`/api/products/category/${catid}`)
+                .then(response => response.json())
+                .then(products => {
+                    const productList = document.getElementById("product-list");
+                    productList.innerHTML = ""; // Clear current product list
+
+                    products.forEach(product => {
+                        let productItem = document.createElement("article");
+                        productItem.classList.add("product");
+
+                        let productLink = document.createElement("a");
+                        productLink.href = `/products/${product.pid}`;  // 动态生成 URL，带有产品 ID
+
+                        let productImage = document.createElement("img");
+                        productImage.src = `/static/images/${product.image}`;
+                        productImage.alt = product.name;
+
+                        let productTitle = document.createElement("h2");
+                        productTitle.textContent = product.name;
+
+                        productLink.appendChild(productImage);
+                        productLink.appendChild(productTitle);
+
+                        let productPrice = document.createElement("p");
+                        productPrice.textContent = `$${product.price}`;
+
+                        let addToCartButton = document.createElement("button");
+                        addToCartButton.classList.add("add-to-cart");
+                        addToCartButton.textContent = "Add to Cart";
+
+                        productItem.appendChild(productLink);
+                        productItem.appendChild(productPrice);
+                        productItem.appendChild(addToCartButton);
+
+                        productList.appendChild(productItem);
+                    });
+                })
+                .catch(error => console.error("Error loading products:", error));
+        }
+
+        // Run the functions when the page loads
+        window.onload = () => {
+            loadCategories();
+        };
+    </script>
+
 </body>
 </html>
-

@@ -1,10 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Manage Products</title>
 </head>
 <body>
-$END$
+    <h1>Manage Products</h1>
+
+    <!-- Add Product / Update Product Form -->
+    <form id="product-form" action="/api/products/" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="_method" id="_method" value="PUT">
+
+        <label for="catid">Category:</label>
+        <select name="catid" id="catid" required>
+            <!-- Categories will be populated dynamically -->
+        </select><br><br>
+
+        <label for="name">Product Name:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="price">Price:</label>
+        <input type="number" id="price" name="price" step="0.01" required><br><br>
+
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required></textarea><br><br>
+
+        <label for="image">Upload Image (jpg/gif/png, <= 10MB):</label>
+        <input type="file" id="image" name="image" accept="image/*"><br><br>
+
+        <img id="product-image" src="" alt="Product Image" style="max-width: 200px; display: none;"><br><br>
+
+        <button type="submit" id="submit-button">Add Product</button>
+    </form>
+
+    <hr>
+
+    <h2>Existing Products</h2>
+    <ul id="product-list"></ul>
+
+    <script>
+        // Fetch and display categories for the dropdown
+        function loadCategories() {
+            fetch('/api/categories/')
+                .then(response => response.json())
+                .then(categories => {
+                    const categorySelect = document.getElementById("catid");
+                    categories.forEach(category => {
+                        const option = document.createElement("option");
+                        option.value = category.catid;
+                        option.textContent = category.name;
+                        categorySelect.appendChild(option);
+                    });
+
+                    // Automatically load the products for the first category when the page loads
+                    if (categories.length > 0) {
+                        loadProducts(categories[0].catid); // Fetch products for the first category
+                    }
+                });
+        }
+
+        // Fetch and display products based on selected category
+        function loadProducts(catid) {
+            fetch(`/api/products/category/${catid}`)
+                .then(response => response.json())
+                .then(products => {
+                    const productList = document.getElementById("product-list");
+                    productList.innerHTML = ""; // Clear current product list
+
+                    products.forEach(product => {
+                        const li = document.createElement("li");
+                        li.textContent = `${product.name} - $${product.price}`;
+
+                        // Create update and delete buttons for each product
+                        const updateButton = document.createElement("button");
+                        updateButton.textContent = "Update";
+                        updateButton.onclick = function() {
+                            // Populate the form with current product data for updating
+                            document.getElementById("name").value = product.name;
+                            document.getElementById("price").value = product.price;
+                            document.getElementById("description").value = product.description;
+
+                            // Show the current product image
+                            const productImage = document.getElementById("product-image");
+                            productImage.src = `/static/images/${product.image}`;
+                            productImage.style.display = "block";
+
+                            // Change form action to update the product
+                            document.getElementById("product-form").action = `/api/products/${product.pid}`;
+
+                            // Change form method to PUT (pseudo method via hidden field)
+                            document.getElementById("_method").value = "PUT";
+
+                            // Change submit button text to "Save Changes"
+                            document.getElementById("submit-button").textContent = "Save Changes";
+                        };
+
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "Delete";
+                        deleteButton.onclick = function() {
+                            fetch(`/api/products/${product.pid}`, {
+                                method: 'DELETE',
+                            })
+                            .then(response => response.json())
+                            .then(() => {
+                                alert("Product deleted");
+                                loadProducts(catid);  // Refresh the product list after deletion
+                            })
+                            .catch(err => console.error("Error deleting product:", err));
+                        };
+
+                        li.appendChild(updateButton);
+                        li.appendChild(deleteButton);
+                        productList.appendChild(li);
+                    });
+                })
+                .catch(error => console.error("Error loading products:", error));
+        }
+
+        // Event listener for category selection change
+        document.getElementById("catid").addEventListener("change", function() {
+            const selectedCatid = this.value;
+            loadProducts(selectedCatid); // Fetch products for the selected category
+        });
+
+        // Run the functions when the page loads
+        window.onload = () => {
+            loadCategories();
+        };
+    </script>
+
 </body>
 </html>

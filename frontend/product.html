@@ -4,20 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Details</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <header>
         <h1>Dummy Shopping</h1>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="#">Category 1</a></li>
-                <li><a href="#">Category 2</a></li>
-            </ul>
-        </nav>
     </header>
-    
+
     <div class="container">
         <aside class="sidebar">
             <h2>Categories</h2>
@@ -27,23 +20,23 @@
                 <li><a href="#">Category 3</a></li>
             </ul>
         </aside>
-        
+
         <main class="main-content">
             <nav class="breadcrumb">
-                <a href="index.html">Home</a> &gt; <a href="#">Category 1</a> &gt; Product 1
+                <a href="index.html">Home</a> &gt; <a href="#">Category 1</a> &gt; <span id="product-name">Product Name</span>
             </nav>
             <section class="product-details">
-                <img src="product1_large.jpg" alt="Product 1">
+                <img id="product-image" src="" alt="Product Image" style="max-width: 200px;">
                 <div class="product-info">
-                    <h2>Product 1</h2>
-                    <p>Price: $33.3</p>
-                    <p>Some descriptions about the product...</p>
+                    <h2 id="product-title">Product Name</h2>
+                    <p id="product-price">$0.00</p>
+                    <p id="product-description">Some descriptions about the product...</p>
                     <button class="add-to-cart">Add to Cart</button>
                 </div>
             </section>
         </main>
     </div>
-    
+
     <aside class="shopping-cart">
         <h2>Shopping List ($2)</h2>
         <ul>
@@ -52,9 +45,27 @@
         </ul>
         <button class="checkout">Checkout</button>
     </aside>
-    
+
     <footer>
         <p>&copy; 2025 Dummy Shopping</p>
     </footer>
+
+    <script>
+        // Get the product ID from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('pid');  // Example: /product.html?pid=1
+
+        // Fetch and display product details based on product ID
+        fetch(`/api/products/${productId}`)
+            .then(response => response.json())
+            .then(product => {
+                document.getElementById("product-name").textContent = product.name;
+                document.getElementById("product-title").textContent = product.name;
+                document.getElementById("product-price").textContent = `$${product.price}`;
+                document.getElementById("product-description").textContent = product.description;
+                document.getElementById("product-image").src = `/static/images/${product.image}`;
+            })
+            .catch(error => console.error("Error loading product:", error));
+    </script>
 </body>
 </html>
