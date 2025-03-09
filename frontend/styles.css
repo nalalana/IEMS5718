@@ -1,8 +1,11 @@
 /* styles.css */
 body {
     font-family: Arial, sans-serif;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
+    display: flex;
+    flex-direction: column;
     background-color: #f4f4f4;
 }
 
@@ -30,6 +33,7 @@ nav ul li a {
 }
 
 .container {
+    flex: 1;
     display: flex;
     margin: 20px;
 }
@@ -102,50 +106,197 @@ nav ul li a {
     margin-top: 10px;
 }
 
+/* 购物车容器样式 */
 .shopping-cart {
     position: fixed;
     right: 20px;
     top: 80px;
     background: white;
-    padding: 5px 15px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 200px;
-    height: 40px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 220px;
+    max-height: 50px; /* 初始收起状态高度 */
     overflow: hidden;
-    transition: height 0.3s ease-in-out;
-    text-align: center;
-    display: block;
-    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    z-index: 1000;
 }
 
-.shopping-cart h2 {
-    margin: 0;
-    font-size: 16px;
-    line-height: 40px;
-}
-
+/* 悬停时展开效果 */
 .shopping-cart:hover {
-    height: auto;
-    width: 250px;
-    padding-bottom: 10px;
+    max-height: 80vh; /* 根据视口高度自动适应 */
+    width: 280px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
+/* 标题样式 */
+.shopping-cart h2 {
+    margin: 0 0 12px 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 购物车列表容器 */
+.shopping-cart ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: calc(80vh - 100px); /* 保留空间给标题和按钮 */
+    overflow-y: auto;
+}
+
+/* 购物车商品项 */
+.shopping-cart li {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.2s;
+}
+
+.shopping-cart li:hover {
+    background: #f9f9f9;
+}
+
+/* 数量控制组件 */
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.quantity-controls input {
+    width: 50px;
+    padding: 4px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: border-color 0.2s;
+}
+
+.quantity-controls input:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+/* 按钮样式 */
 .checkout {
-    background-color: #007bff;
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    background: #3498db;
     color: white;
     border: none;
-    padding: 10px;
+    border-radius: 4px;
     cursor: pointer;
-    margin-top: 10px;
+    transition: background 0.2s;
 }
+
+.checkout:hover {
+    background: #2980b9;
+}
+
+/* 关闭/删除按钮 */
+.remove {
+    color: #e74c3c;
+    background-color: #fce8e6;  /* 新增背景色提升可视性 */
+    border: 1px solid #ef9a9a;  /* 添加边框 */
+    border-radius: 4px;         /* 圆角效果 */
+    padding: 4px 6px;          /* 增大点击区域 */
+    margin-left: 15px;          /* 增加间距 */
+    cursor: pointer;
+    font-size: 14px;            /* 增大字号 */
+    font-weight: 500;
+    transition: all 0.2s;       /* 增强过渡效果 */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.remove:hover {
+    background-color: #f8c6c3;   /* 悬停状态反馈 */
+    border-color: #e74c3c;
+    opacity: 1;
+    transform: translateY(-1px); /* 悬停微动效 */
+}
+
+/* 展开时的附加效果 */
+.shopping-cart:hover .checkout {
+    display: block; /* 确保结账按钮在展开时可见 */
+}
+
+
 
 footer {
     background-color: #333;
     color: white;
     text-align: center;
     padding: 1rem;
-    position: absolute;
+    margin-top: auto;
     width: 100%;
     bottom: 0;
+}
+
+.product-details {
+    display: flex;
+    gap: 40px; /* 控制图片和文字间距 */
+    align-items: flex-start; /* 顶部对齐 */
+    margin-top: 20px;
+}
+
+.product-image {
+    flex: 0 0 500px; /* 固定图片容器宽度 */
+    max-width: 100%; /* 响应式适配 */
+    height: auto;
+}
+
+.product-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.product-info {
+    flex: 1; /* 占据剩余空间 */
+    min-width: 300px; /* 保证最小可读宽度 */
+}
+
+/* 响应式设计：小屏幕时切换为上下布局 */
+@media (max-width: 768px) {
+    .product-details {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .product-image {
+        flex: none;
+        width: 100%;
+    }
+}
+
+#product-title {
+    font-size: 2.2rem;
+    margin-bottom: 1.2rem;
+    color: #333;
+}
+
+#product-price {
+    font-size: 1.8rem;
+    color: #e44d2e;
+    margin-bottom: 1.5rem;
+}
+
+#product-description {
+    line-height: 1.6;
+    color: #666;
+    margin-bottom: 2rem;
 }

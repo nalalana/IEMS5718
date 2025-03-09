@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dummy Shopping Site</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script type="module">
+        import { cart, updateCartDisplay } from '/static/js/cart.js';
+
+        // 暴露到全局以便调试
+        window.cart = cart;
+        window.updateCartDisplay = updateCartDisplay;
+
+        // 初始化购物车显示
+        document.addEventListener('DOMContentLoaded', updateCartDisplay);
+    </script>
 </head>
 <body>
     <header>
-        <h1>Dummy Shopping</h1>
+        <h1>Home</h1>
     </header>
 
     <div class="container">
@@ -27,11 +37,8 @@
     </div>
 
     <aside class="shopping-cart">
-        <h2>Shopping List ($2)</h2>
-        <ul>
-            <li>Prod 2 [1] @$1.0</li>
-            <li>Prod 3 [2] @$0.5</li>
-        </ul>
+        <h2>Shopping Cart ($0.00)</h2>
+        <ul></ul>
         <button class="checkout">Checkout</button>
     </aside>
 
@@ -40,38 +47,39 @@
     </footer>
 
     <script>
+        function getCategoryIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('catid');
+        }
+
         function loadCategories() {
-            fetch('/api/categories/')
+            return fetch('/api/categories/')
                 .then(response => response.json())
                 .then(categories => {
                     const sidebarCategories = document.getElementById("sidebar-categories");
+                    sidebarCategories.innerHTML = "";
 
                     categories.forEach(category => {
-                        // Create sidebar category with product count
                         let sidebarItem = document.createElement("li");
                         let sidebarLink = document.createElement("a");
                         sidebarLink.href = "#";
-                        sidebarLink.textContent = `${category.name}`;
+                        sidebarLink.textContent = category.name;
+                        // 添加 data-catid 属性
+                        sidebarLink.dataset.catid = category.catid;
 
-                        // Add click event to update selected category style
-                        sidebarLink.onclick = () => {
+                        sidebarLink.onclick = (e) => {
+                            e.preventDefault();
                             loadProducts(category.catid);
-                            selectCategory(sidebarLink);  // Set the clicked category as selected
+                            selectCategory(sidebarLink);
+                            // 更新 URL 但不刷新页面
+                            history.pushState(null, '', `?catid=${category.catid}`);
                         };
-
 
                         sidebarItem.appendChild(sidebarLink);
                         sidebarCategories.appendChild(sidebarItem);
                     });
-
-                    // Default load the first category's products
-                    if (categories.length > 0) {
-                        const firstCategoryLink = sidebarCategories.querySelector("a"); // Get the first category link
-                        loadProducts(categories[0].catid); // Load the products for the first category
-                        selectCategory(firstCategoryLink); // Set the first category as selected
-                    }
-                })
-                .catch(error => console.error("Error loading categories:", error));
+                    return categories; // 返回 Promise 链数据
+                });
         }
 
         // Function to highlight the selected category
@@ -112,9 +120,20 @@
                         let productPrice = document.createElement("p");
                         productPrice.textContent = `$${product.price}`;
 
-                        let addToCartButton = document.createElement("button");
-                        addToCartButton.classList.add("add-to-cart");
-                        addToCartButton.textContent = "Add to Cart";
+                        let addToCartButton = document.createElement("button")
+                        addToCartButton.classList.add("add-to-cart")
+                        addToCartButton.textContent = "Add to Cart"
+                        addToCartButton.dataset.pid = product.pid // 添加数据属性
+
+                        // 绑定点击事件
+                        addToCartButton.addEventListener("click", async () => {
+                            try {
+                                await cart.addProduct(product.pid)
+                                updateCartDisplay()
+                            } catch (error) {
+                                console.error("添加商品失败:", error)
+                            }
+                        })
 
                         productItem.appendChild(productLink);
                         productItem.appendChild(productPrice);
@@ -128,8 +147,41 @@
 
         // Run the functions when the page loads
         window.onload = () => {
-            loadCategories();
+            loadCategories().then(() => {
+                const targetCatId = getCategoryIdFromURL();
+                if (targetCatId) {
+                    // 延迟确保分类列表已渲染
+                    setTimeout(() => {
+                        const targetLink = document.querySelector(`a[data-catid="${targetCatId}"]`);
+                        if (targetLink) {
+                            loadProducts(targetCatId);
+                            selectCategory(targetLink);
+                        }
+                    }, 50);
+                } else {
+                    // 默认加载第一个分类
+                    const firstLink = document.querySelector('#sidebar-categories a');
+                    if (firstLink) {
+                        const firstCatId = firstLink.dataset.catid;
+                        loadProducts(firstCatId);
+                        selectCategory(firstLink);
+                    }
+                }
+            });
+            updateCartDisplay();
         };
+
+        window.addEventListener('popstate', () => {
+            const targetCatId = getCategoryIdFromURL();
+            if (targetCatId) {
+                const targetLink = document.querySelector(`a[data-catid="${targetCatId}"]`);
+                if (targetLink) {
+                    loadProducts(targetCatId);
+                    selectCategory(targetLink);
+                }
+            }
+        });
+
     </script>
 
 </body>

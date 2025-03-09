@@ -26,14 +26,14 @@ def get_db():
 def root():
     # 返回 frontend/index.html 文件
     file_path = os.path.join(os.getcwd(), 'frontend', 'index.html')
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
     return content
 
 @app.get("/admin/categories", response_class=HTMLResponse)
 def category_form():
     file_path = os.path.join(os.getcwd(), 'frontend', 'category_form.html')
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
     return content
 
@@ -41,21 +41,33 @@ def category_form():
 @app.get("/admin/products", response_class=HTMLResponse)
 def product_form():
     file_path = os.path.join(os.getcwd(), 'frontend', 'product_form.html')
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
     return content
 
 
-@app.get("/products/{pid}")
+@app.get("/products/{pid}", response_class=HTMLResponse)
 def get_product_details(pid: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.pid == pid).first()
+    current_category = db.query(Category).filter(Category.catid == product.catid).first()
     if product:
-        return {
-            "name": product.name,
-            "price": product.price,
-            "description": product.description,
-            "image": product.image
-        }
+        # product =  {
+        #     "name": product.name,
+        #     "catid": product.catid
+        #     "price": product.price,
+        #     "description": product.description,
+        #     "image": product.image
+        # }
+        file_path = os.path.join(os.getcwd(), 'frontend', 'product.html')
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        content = content.replace("{{ current.category }}", current_category.name)
+        content = content.replace("{{ product.name }}", product.name)
+        content = content.replace("{{ product.price }}", str(product.price))
+        content = content.replace("{{ product.description }}", product.description)
+        content = content.replace("{{ product.image }}", product.image)
+        return content
     return {"error": "Product not found"}
 
 
@@ -82,6 +94,16 @@ async def create_product(
         image: UploadFile = File(...),
         db: Session = Depends(get_db)
 ):
+    """
+    创建新产品
+    :param catid:
+    :param name:
+    :param price:
+    :param description:
+    :param image:
+    :param db:
+    :return:
+    """
     # 创建存储上传图片的目录，如果目录不存在
     images_dir = os.path.join("frontend", "images")
     if not os.path.exists(images_dir):
@@ -101,11 +123,6 @@ async def create_product(
     db.commit()
     db.refresh(db_product)
     return db_product
-
-
-@app.get("/api/products/category/{catid}")
-def get_products_by_category(catid: int, db: Session = Depends(get_db)):
-    return db.query(Product).filter(Product.catid == catid).all()
 
 
 @app.post("/api/products/{pid}")
@@ -171,6 +188,26 @@ def delete_product(pid: int, db: Session = Depends(get_db)):
     db.delete(db_product)
     db.commit()
     return {"message": "Product deleted successfully"}
+
+@app.get("/api/products/{pid}")
+def get_details(pid: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.pid == pid).first()
+    # current_category = db.query(Category).filter(Category.catid == product.catid).first()
+    if product:
+        return  {
+            "pid": product.pid,
+            "name": product.name,
+            "catid": product.catid,
+            "price": product.price,
+            "description": product.description,
+            "image": product.image
+        }
+    return {"error": "Product not found"}
+
+@app.get("/api/products/category/{catid}")
+def get_products_by_category(catid: int, db: Session = Depends(get_db)):
+    return db.query(Product).filter(Product.catid == catid).all()
+
 
 
 if __name__ == "__main__":
