@@ -1,6 +1,7 @@
-fastapi~=0.112.4
-uvicorn~=0.30.6
-starlette~=0.38.5
+fastapi~=0.115.11
+uvicorn~=0.34.0
+starlette~=0.46.0
 SQLAlchemy~=2.0.35
-pydantic~=2.8.2
+pydantic~=2.10.6
 pyodbc~=5.2.0
+python-multipart
