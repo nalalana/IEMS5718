@@ -2,12 +2,19 @@ import os
 import uuid
 from shutil import copyfileobj
 
-from fastapi import FastAPI, File, UploadFile, Depends, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Response, Cookie
+from fastapi import Form
 from sqlalchemy.orm import Session
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.staticfiles import StaticFiles
 
-from database import SessionLocal, Category, Product
+from database import Category, Product, UserCreate, User, get_password_hash, UserLogin, verify_password
+from database import SessionLocal
+
+
+from fastapi.responses import FileResponse
+from fastapi import Request, Depends
+from fastapi.responses import RedirectResponse
 
 app = FastAPI()
 
@@ -22,16 +29,34 @@ def get_db():
         db.close()
 
 
+# 获取当前用户信息（用于后续 admin 权限控制）
+def get_current_user(session_token: str = Cookie(None)):
+    if session_token and session_token in session_store:
+        return session_store[session_token]
+    return None
+
 @app.get("/", response_class=HTMLResponse)
-def root():
+def root(request: Request, user=Depends(get_current_user)):
     # 返回 frontend/index.html 文件
+    """
+    返回主页
+    :return:
+    """
+    # if not user:
+    #     return RedirectResponse(url="/login")
     file_path = os.path.join(os.getcwd(), 'frontend', 'index.html')
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
     return content
 
 @app.get("/admin/categories", response_class=HTMLResponse)
-def category_form():
+def category_form(request: Request, user=Depends(get_current_user)):
+    """
+    管理员访问页面，用于管理目录，例如添加新目录
+    :return:
+    """
+    if not user or not user.get("is_admin"):
+        return RedirectResponse(url="/login")
     file_path = os.path.join(os.getcwd(), 'frontend', 'category_form.html')
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -39,7 +64,14 @@ def category_form():
 
 
 @app.get("/admin/products", response_class=HTMLResponse)
-def product_form():
+def product_form(request: Request, user=Depends(get_current_user)):
+    """
+    管理员访问页面，管理每个目录中的商品
+    :return:
+    """
+    if not user or not user.get("is_admin"):
+        return RedirectResponse(url="/login")
+
     file_path = os.path.join(os.getcwd(), 'frontend', 'product_form.html')
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -48,6 +80,12 @@ def product_form():
 
 @app.get("/products/{pid}", response_class=HTMLResponse)
 def get_product_details(pid: int, db: Session = Depends(get_db)):
+    """
+    前端，商品详情页面
+    :param pid:
+    :param db:
+    :return:
+    """
     product = db.query(Product).filter(Product.pid == pid).first()
     current_category = db.query(Category).filter(Category.catid == product.catid).first()
     if product:
@@ -70,9 +108,30 @@ def get_product_details(pid: int, db: Session = Depends(get_db)):
         return content
     return {"error": "Product not found"}
 
+@app.get("/register", response_class=HTMLResponse)
+def serve_register():
+    file_path = os.path.join(os.getcwd(), 'frontend', 'register.html')
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+    return content
+
+@app.get("/login", response_class=HTMLResponse)
+def serve_login():
+    file_path = os.path.join(os.getcwd(), 'frontend', 'login.html')
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+    return content
+
+
 
 @app.post("/api/categories/")
 def create_category(name: str = Form(...), db: Session = Depends(get_db)):
+    """
+    后端接口，创建目录
+    :param name:
+    :param db:
+    :return:
+    """
     db_category = Category(name=name)
     db.add(db_category)
     db.commit()
@@ -82,6 +141,11 @@ def create_category(name: str = Form(...), db: Session = Depends(get_db)):
 
 @app.get("/api/categories/")
 def get_categories(db: Session = Depends(get_db)):
+    """
+    后端接口，查看目录
+    :param db:
+    :return:
+    """
     return db.query(Category).all()
 
 
@@ -207,6 +271,50 @@ def get_details(pid: int, db: Session = Depends(get_db)):
 @app.get("/api/products/category/{catid}")
 def get_products_by_category(catid: int, db: Session = Depends(get_db)):
     return db.query(Product).filter(Product.catid == catid).all()
+
+
+# 简易 session 存储：建议后期替换为 Redis 或数据库
+session_store = {}
+
+@app.post("/api/register")
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # db: Session = Depends(get_db)
+    if db.query(User).filter(User.email == user.email).first():
+        return {"error": "Email already registered"}
+
+    hashed_pwd = get_password_hash(user.password)
+    db_user = User(email=user.email, password=hashed_pwd)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    db.close()
+    return {"message": "User registered successfully"}
+
+@app.post("/api/login")
+def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
+
+    db_user = db.query(User).filter(User.email == user.email).first()
+    db.close()
+
+    if not db_user or not verify_password(user.password, db_user.password):
+        return {"error": "Invalid email or password"}
+
+    session_token = str(uuid.uuid4())
+    session_store[session_token] = {"email": user.email, "is_admin": db_user.is_admin}
+    if db_user.is_admin:
+        response = RedirectResponse(url="/admin/products", status_code=302)
+    else:
+        response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(key="session_token", value=session_token, httponly=True)
+    return response
+
+@app.get("/api/logout")
+def logout(response: Response):
+    response = RedirectResponse(url="/")
+    response.delete_cookie("session_token")
+    return response
+
+
 
 
 

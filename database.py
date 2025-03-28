@@ -6,10 +6,14 @@ from pydantic import BaseModel
 import urllib
 import pyodbc
 
+from sqlalchemy import Column, Integer, String, Boolean
+from passlib.context import CryptContext
+from pydantic import BaseModel
+
+# 密码加密上下文
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 app = FastAPI()
-
-
-
 
 
 params = urllib.parse.quote_plus(r'Driver={ODBC Driver 18 for SQL Server};Server=tcp:iems5718shop.database.windows.net,1433;Database=shop;Uid=nalalana;Pwd={240423Xdw};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
@@ -48,5 +52,31 @@ class ProductCreate(BaseModel):
     price: float
     image: str
     description: str
+
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    is_admin = Column(Boolean, default=False)
+
+# 用于注册和登录
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+# 工具函数
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
 

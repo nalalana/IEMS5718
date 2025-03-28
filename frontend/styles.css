@@ -300,3 +300,64 @@ footer {
     color: #666;
     margin-bottom: 2rem;
 }
+
+.auth-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px;
+    background-color: white;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.auth-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.auth-container form {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-container label {
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+.auth-container input[type="email"],
+.auth-container input[type="password"],
+.auth-container input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.auth-container button {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.auth-container button:hover {
+    background-color: #218838;
+}
+
+.auth-container .switch-link {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.auth-container .switch-link a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.auth-container .switch-link a:hover {
+    text-decoration: underline;
+}
+

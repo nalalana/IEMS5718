@@ -5,3 +5,4 @@ SQLAlchemy~=2.0.35
 pydantic~=2.10.6
 pyodbc~=5.2.0
 python-multipart
+bcrypt
