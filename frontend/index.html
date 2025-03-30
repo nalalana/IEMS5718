@@ -19,6 +19,15 @@
 <body>
     <header>
         <h1>Home</h1>
+            <div class="account-panel">
+              <div class="account-trigger">{{ username }}</div>
+              <div class="account-dropdown">
+                <a href="/login">登录</a>
+                <a href="/api/logout">登出</a>
+                <a href="/change-password">修改密码</a>
+                  {{ admin_links }}
+              </div>
+            </div>
     </header>
 
     <div class="container">
@@ -181,6 +190,8 @@
                 }
             }
         });
+
+
 
     </script>
 

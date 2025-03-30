@@ -10,11 +10,13 @@
     <div class="auth-container">
         <h2>Admin Login</h2>
         <form id="login-form">
+            <input name="csrf_token" type="hidden" value="{{ csrf_token }}"/>
             <label for="email">Email:</label><br>
             <input type="email" id="email" required><br><br>
             <label for="password">Password:</label><br>
             <input type="password" id="password" required><br><br>
             <button type="submit">Login</button>
+            <a href="/register">没有账户？注册</a>
         </form>
 
         <script>
@@ -22,11 +24,12 @@
                 e.preventDefault();
                 const email = document.getElementById("email").value;
                 const password = document.getElementById("password").value;
+                const csrf_token = document.querySelector('input[name="csrf_token"]').value;
 
                 const res = await fetch("/api/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password }),
+                    body: JSON.stringify({ email, password, csrf_token }),
                 });
 
                 if (res.redirected) {

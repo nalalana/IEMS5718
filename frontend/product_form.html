@@ -10,6 +10,7 @@
 
     <!-- Add Product / Update Product Form -->
     <form id="product-form" action="/api/products/" method="POST" enctype="multipart/form-data">
+        <input name="csrf_token" type="hidden" value="{{ csrf_token }}"/>
         <input type="hidden" name="_method" id="_method" value="PUT">
 
         <label for="catid">Category:</label>
