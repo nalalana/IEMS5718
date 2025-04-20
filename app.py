@@ -2,25 +2,31 @@ import os
 import secrets
 import uuid
 from shutil import copyfileobj
+import hmac
+import hashlib
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Response, Cookie
 from fastapi import Form
 from sqlalchemy.orm import Session
 from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.staticfiles import StaticFiles
+import templates
 
 from database import Category, Product, UserCreate, User, get_password_hash, UserLogin, verify_password
 from database import SessionLocal
 
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi import Request, Depends
 from fastapi.responses import RedirectResponse
+from database import Order, OrderItem
+from datetime import datetime
 
 app = FastAPI()
 
 
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
 
 csrf_tokens = {}
 
@@ -50,7 +56,7 @@ def get_current_user(session_token: str = Cookie(None)):
 def root(request: Request, user=Depends(get_current_user)):
     username = user["email"] if user else "guest"
     is_admin = user["is_admin"] if user else False
-    admin_links = """<a href="/admin/products">管理商品</a><a href="/admin/categories">管理目录</a>""" if is_admin else ""
+    admin_links = """<a href="/admin/products">管理商品</a><a href="/admin/categories">管理目录</a><a href="/admin/orders">所有订单</a>""" if is_admin else ""
     file_path = os.path.join(os.getcwd(), 'frontend', 'index.html')
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
@@ -93,6 +99,88 @@ def product_form(request: Request, user=Depends(get_current_user)):
     content = content.replace("{{ csrf_token }}", csrf_token)
     return content
 
+
+@app.get("/member/orders")
+def member_order_list(request: Request, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in")
+
+    db_user = db.query(User).filter(User.email == user["email"]).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    orders = db.query(Order).filter(Order.userid == db_user.id).order_by(Order.created_at.desc()).limit(5).all()
+
+    html_block = ""
+    for order in orders:
+        items = db.query(OrderItem).filter(OrderItem.orderid == order.orderid).all()
+        html_block += f"<div class='order-block'>"
+        html_block += f"<p><b>OrderID:</b> {order.orderid}</p>"
+        html_block += f"<p><b>Status:</b> {order.status}</p>"
+        html_block += f"<p><b>Total:</b> ${order.total_price:.2f}</p>"
+        html_block += f"<p><b>Time:</b> {order.created_at.strftime('%Y-%m-%d %H:%M')}</p>"
+        html_block += "<ul>"
+        for item in items:
+            product = db.query(Product).filter(Product.pid == item.pid).first()
+            html_block += f"""<li class="product-item">
+                    <span class="product-name">{product.name}</span>
+                    <span class="quantity">× {item.quantity}</span>
+                    <span class="price">@ ${item.price:.2f}</span>
+                </li>"""
+        html_block += "</ul></div>"
+
+    with open("frontend/member_orders.html", "r", encoding="utf-8") as f:
+        html_template = f.read().replace("{{ORDERS}}", html_block)
+
+    return HTMLResponse(content=html_template, media_type="text/html")
+
+@app.get("/admin/orders")
+def admin_order_list(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    token_key = user["email"] if user else "guest"
+    csrf_token = generate_csrf_token(token_key)
+    if not user or not user.get("is_admin"):
+        return RedirectResponse(url="/login")
+    orders = db.query(Order).order_by(Order.created_at.desc()).all()
+
+    html_block = ""
+    for order in orders:
+        items = db.query(OrderItem).filter(OrderItem.orderid == order.orderid).all()
+        html_block += f"<div class='order-block'>"
+        html_block += f"<p><b>OrderID:</b> {order.orderid}</p>"
+        html_block += f"<p><b>UserID:</b> {order.userid or 'Guest'}</p>"
+        html_block += f"<p><b>Status:</b> {order.status}</p>"
+        html_block += f"<p><b>Total:</b> ${order.total_price:.2f}</p>"
+        html_block += f"<p><b>Time:</b> {order.created_at.strftime('%Y-%m-%d %H:%M')}</p>"
+        html_block += f"<p><b>Transaction:</b> {order.paypal_transaction_id or '-'}</p>"
+        html_block += "<ul>"
+        for item in items:
+            product = db.query(Product).filter(Product.pid == item.pid).first()
+            html_block += f"""<li class="product-item">
+                                <span class="product-name">{product.name}</span>
+                                <span class="quantity">× {item.quantity}</span>
+                                <span class="price">@ ${item.price:.2f}</span>
+                            </li>"""
+        html_block += "</ul></div>"
+
+    with open("frontend/admin_orders.html", "r", encoding="utf-8") as f:
+        html_template = f.read().replace("{{ORDERS}}", html_block)
+
+    return HTMLResponse(content=html_template, media_type="text/html")
+
+
+@app.get("/success")
+def payment_success(request: Request):
+    payer_id = request.query_params.get("PayerID", "Unavailable")
+
+    with open("frontend/success.html", "r", encoding="utf-8") as f:
+        html = f.read().replace("{{PAYER_ID}}", payer_id)
+
+    return HTMLResponse(content=html, media_type="text/html")
+
+@app.get("/cancel")
+def payment_cancel():
+    path = os.path.join("frontend", "cancel.html")
+    return FileResponse(path, media_type="text/html")
 
 @app.get("/products/{pid}", response_class=HTMLResponse)
 def get_product_details(pid: int, db: Session = Depends(get_db)):
@@ -386,7 +474,7 @@ async def login(request: Request, response: Response,
         return {"error": "Invalid email or password"}
 
     session_token = str(uuid.uuid4())
-    session_store[session_token] = {"email": user.email, "is_admin": db_user.is_admin}
+    session_store[session_token] = {"email": user.email, "is_admin": db_user.is_admin, "id": db_user.id}
     response = RedirectResponse(url="/", status_code=302)
     response.set_cookie(key="session_token", value=session_token, httponly=True)
     return response
@@ -469,6 +557,7 @@ async def create_order(
     digest = generate_order_digest(order_data, salt)
     
     # 创建订单
+    username = user["email"] if user else "guest"
     order = Order(
         userid=user["id"],
         total_price=total_price,
@@ -497,49 +586,55 @@ async def create_order(
     }
 
 @app.post("/api/paypal/webhook")
-async def paypal_webhook(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    """处理 PayPal IPN 通知"""
+async def paypal_webhook(request: Request, db: Session = Depends(get_db)):
     data = await request.form()
-    
-    # 验证 PayPal 通知的真实性
+
+    # Step 1: 验证 PayPal 发出
     verify_url = "https://www.sandbox.paypal.com/cgi-bin/webscr"
     async with httpx.AsyncClient() as client:
         verify_data = dict(data)
         verify_data["cmd"] = "_notify-validate"
         response = await client.post(verify_url, data=verify_data)
-        
         if response.text != "VERIFIED":
             raise HTTPException(status_code=400, detail="Invalid PayPal notification")
-    
-    # 解析订单信息
+
+    txn_id = data.get("txn_id")
     custom = data.get("custom", "")
-    transaction_id = data.get("txn_id")
+    invoice = data.get("invoice")
     payment_status = data.get("payment_status")
-    
-    if not custom or ":" not in custom:
-        raise HTTPException(status_code=400, detail="Invalid order digest")
-    
-    salt, stored_digest = custom.split(":", 1)
-    
-    # 查找并更新订单
-    order = db.query(Order).filter(Order.digest == custom).first()
+
+    if not custom or ":" not in custom or not invoice:
+        raise HTTPException(status_code=400, detail="Missing digest")
+
+    # Step 2: 防重复处理
+    order = db.query(Order).filter(Order.orderid == invoice).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-        
     if order.status != "pending":
-        return {"message": "Order already processed"}
-    
-    # 更新订单状态
+        return {"message": "Order already handled"}
+
+    # Step 3: 重建 digest 校验完整性
+    salt, original_digest = custom.split(":", 1)
+
+    items = db.query(OrderItem).filter(OrderItem.orderid == invoice).all()
+    total = sum(item.price * item.quantity for item in items)
+
+    digest_str = f"sb-61qba40343014@business.example.com|USD|{salt}"
+    for item in sorted(items, key=lambda x: x.pid):
+        digest_str += f"|{item.pid}|{item.quantity}|{item.price}"
+    digest_str += f"|{round(total, 2)}"
+
+    regenerated = hmac.new(salt.encode(), digest_str.encode(), hashlib.sha256).hexdigest()
+    if regenerated != original_digest:
+        raise HTTPException(status_code=400, detail="Digest mismatch")
+
+    # Step 4: 标记订单成功
     if payment_status == "Completed":
         order.status = "paid"
-        order.paypal_transaction_id = transaction_id
+        order.paypal_transaction_id = txn_id
         db.commit()
-        
-    return {"message": "Payment processed successfully"}
 
+    return {"message": "Payment processed"}
 
 def generate_order_digest(order_data, salt):
     """生成订单摘要"""
@@ -554,6 +649,80 @@ def generate_order_digest(order_data, salt):
         hashlib.sha256
     ).hexdigest()
 
+@app.post("/api/checkout")
+async def checkout(request: Request, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    data = await request.json()
+    items = data.get("items", [])  # [{pid, quantity}]
+    userid = data.get("userid")  # None if guest
+    token_key = user["id"] if user else "guest"
+    csrf_token = generate_csrf_token(token_key)
+
+    if not items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    # Step 1: 查库获取商品详情，计算总价
+    product_map = {}
+    total = 0.0
+    for item in items:
+        product = db.query(Product).filter(Product.pid == item["pid"]).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item['pid']} not found")
+        price = product.price
+        quantity = item["quantity"]
+        total += price * quantity
+        product_map[item["pid"]] = {"name": product.name, "price": price, "quantity": quantity}
+
+    # Step 2: 构造摘要
+    salt = str(uuid.uuid4())
+    digest_str = f"sb-61qba40343014@business.example.com|USD|{salt}"
+    for pid in sorted(product_map):
+        p = product_map[pid]
+        digest_str += f"|{pid}|{p['quantity']}|{p['price']}"
+    digest_str += f"|{round(total, 2)}"
+    digest = hmac.new(salt.encode(), digest_str.encode(), hashlib.sha256).hexdigest()
+    custom = f"{salt}:{digest}"
+
+    # Step 3: 插入订单和订单项
+    order = Order(
+        userid=token_key,
+        status="pending",
+        total_price=total,
+        digest=custom,
+        created_at=datetime.utcnow()
+    )
+    db.add(order)
+    db.flush()  # 得到 orderid
+    for pid, detail in product_map.items():
+        db.add(OrderItem(
+            orderid=order.orderid,
+            pid=pid,
+            quantity=detail["quantity"],
+            price=detail["price"]
+        ))
+    db.commit()
+
+    # Step 4: 构造返回的 PayPal 参数
+    params = {
+        "cmd": "_cart",
+        "upload": "1",
+        "business": "sb-61qba40343014@business.example.com",
+        "currency_code": "USD",
+        "charset": "utf-8",
+        "invoice": str(order.orderid),
+        "custom": custom,
+        "return": "http://127.0.0.1:8000/success",
+        "cancel_return": "http://127.0.0.1:8000/cancel",
+    }
+    for i, (pid, p) in enumerate(product_map.items(), start=1):
+        params[f"item_name_{i}"] = p["name"]
+        params[f"item_number_{i}"] = str(pid)
+        params[f"amount_{i}"] = str(p["price"])
+        params[f"quantity_{i}"] = str(p["quantity"])
+
+    return JSONResponse({
+        "paypal_url": "https://www.sandbox.paypal.com/cgi-bin/webscr",
+        "params": params
+    })
 
 if __name__ == "__main__":
     import uvicorn

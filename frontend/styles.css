@@ -410,3 +410,46 @@ footer {
 .account-panel:hover .account-dropdown {
     display: block;
 }
+
+.order-block {
+    display: block;  /* 明确为块级布局 */
+    width: 100%;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.order-block p {
+    margin: 4px 0;
+}
+
+.order-block ul {
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+.order-block li {
+    line-height: 1.5;
+}
+.order-block .product-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.product-name { flex: 3; }  /* 名称占3份宽度 */
+.quantity { 
+    flex: 1; 
+    text-align: center;
+    color: #fd7702;
+}
+.price {
+    flex: 1;
+    text-align: right;
+    color: #3af805;
+    font-weight: bold;
+}

@@ -152,3 +152,54 @@ function createQuantityControls(pid, quantity) {
     container.append(decrement, input, increment, remove)
     return container
 }
+
+// Checkout 按钮绑定逻辑
+document.querySelector(".checkout")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const items = [...cart.items.values()].map(item => ({
+        pid: item.pid,
+        quantity: item.quantity
+    }));
+
+    if (items.length === 0) {
+        alert("Cart is empty.");
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                items,
+                userid: window.currentUserId || null // 后台需处理 null → guest
+            })
+        });
+
+        if (!res.ok) throw new Error("Checkout failed");
+
+        const { paypal_url, params } = await res.json();
+
+        // 创建表单并提交
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = paypal_url;
+
+        for (const [key, val] of Object.entries(params)) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = val;
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        cart.items.clear();
+        cart.save();  // 清空 localStorage
+        form.submit();
+    } catch (err) {
+        console.error(err);
+        alert("Checkout error.");
+    }
+});

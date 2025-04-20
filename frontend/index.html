@@ -25,6 +25,7 @@
                 <a href="/login">登录</a>
                 <a href="/api/logout">登出</a>
                 <a href="/change-password">修改密码</a>
+                <a href="/member/orders">我的订单</a>
                   {{ admin_links }}
               </div>
             </div>
@@ -203,46 +204,6 @@
 
     </script>
 
-    // 添加结账处理函数
-    async function handleCheckout(event) {
-        event.preventDefault();
-        
-        try {
-            // 获取购物车商品信息
-            const cartItems = Array.from(cart.items.values()).map(item => ({
-                pid: item.pid,
-                quantity: item.quantity
-            }));
-            
-            // 发送到服务器生成订单
-            const response = await fetch('/api/orders/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ items: cartItems })
-            });
-            
-            if (!response.ok) {
-                throw new Error('订单创建失败');
-            }
-            
-            const orderData = await response.json();
-            
-            // 设置订单摘要
-            document.getElementById('order-digest').value = orderData.digest;
-            
-            // 提交表单到PayPal
-            event.target.submit();
-            
-        } catch (error) {
-            console.error('结账失败:', error);
-            alert('结账过程中出现错误，请稍后重试');
-        }
-    }
     
-    // 绑定结账事件
-    document.getElementById('checkout-form').addEventListener('submit', handleCheckout);
-</script>
 </body>
 </html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Success</title>
+    <link rel="stylesheet" href="/frontend/styles.css">
+    <style>
+        .notice-card {
+            background: #e6ffed;
+            border: 1px solid #b7eb8f;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 80px auto;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .notice-card h1 {
+            color: #2c7a4b;
+            margin-bottom: 10px;
+        }
+        .notice-card p {
+            margin: 10px 0;
+            color: #2e593f;
+        }
+        .notice-card a {
+            display: inline-block;
+            margin-top: 20px;
+            color: white;
+            background: #2c7a4b;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+        .notice-card a:hover {
+            background: #25643c;
+        }
+    </style>
+</head>
+<body>
+    <div class="notice-card">
+        <h1>✅ Payment Successful!</h1>
+        <p>Your transaction was completed.</p>
+        <p><b>Payer ID:</b> {{PAYER_ID}}</p>
+        <a href="/">Return to Home</a>
+    </div>
+</body>
+</html>
