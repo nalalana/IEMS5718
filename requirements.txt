@@ -7,3 +7,7 @@ pyodbc~=5.2.0
 python-multipart
 bcrypt
 passlib~=1.7.4
+templates~=0.0.5
+datetime
+hmac
+hashlib
