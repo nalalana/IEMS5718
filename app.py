@@ -429,7 +429,130 @@ def change_password(
     return response
 
 
+@app.post("/api/orders/create")
+async def create_order(
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Please login first")
+        
+    data = await request.json()
+    items = data.get("items", [])
+    
+    # 验证商品并计算总价
+    total_price = 0
+    order_items = []
+    
+    for item in items:
+        product = db.query(Product).filter(Product.pid == item["pid"]).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item['pid']} not found")
+            
+        order_items.append({
+            "pid": product.pid,
+            "quantity": item["quantity"],
+            "price": product.price
+        })
+        total_price += product.price * item["quantity"]
+    
+    # 生成订单摘要
+    salt = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+    order_data = {
+        "merchant_email": "sb-61qba40343014@business.example.com",
+        "currency": "USD",
+        "items": order_items,
+        "total_price": total_price
+    }
+    
+    digest = generate_order_digest(order_data, salt)
+    
+    # 创建订单
+    order = Order(
+        userid=user["id"],
+        total_price=total_price,
+        digest=f"{salt}:{digest}"
+    )
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    
+    # 创建订单项
+    for item in order_items:
+        order_item = OrderItem(
+            orderid=order.orderid,
+            pid=item["pid"],
+            quantity=item["quantity"],
+            price=item["price"]
+        )
+        db.add(order_item)
+    
+    db.commit()
+    
+    return {
+        "orderid": order.orderid,
+        "digest": order.digest,
+        "total_price": total_price
+    }
 
+@app.post("/api/paypal/webhook")
+async def paypal_webhook(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """处理 PayPal IPN 通知"""
+    data = await request.form()
+    
+    # 验证 PayPal 通知的真实性
+    verify_url = "https://www.sandbox.paypal.com/cgi-bin/webscr"
+    async with httpx.AsyncClient() as client:
+        verify_data = dict(data)
+        verify_data["cmd"] = "_notify-validate"
+        response = await client.post(verify_url, data=verify_data)
+        
+        if response.text != "VERIFIED":
+            raise HTTPException(status_code=400, detail="Invalid PayPal notification")
+    
+    # 解析订单信息
+    custom = data.get("custom", "")
+    transaction_id = data.get("txn_id")
+    payment_status = data.get("payment_status")
+    
+    if not custom or ":" not in custom:
+        raise HTTPException(status_code=400, detail="Invalid order digest")
+    
+    salt, stored_digest = custom.split(":", 1)
+    
+    # 查找并更新订单
+    order = db.query(Order).filter(Order.digest == custom).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    if order.status != "pending":
+        return {"message": "Order already processed"}
+    
+    # 更新订单状态
+    if payment_status == "Completed":
+        order.status = "paid"
+        order.paypal_transaction_id = transaction_id
+        db.commit()
+        
+    return {"message": "Payment processed successfully"}
+
+
+def generate_order_digest(order_data, salt):
+    """生成订单摘要"""
+    data = f"{order_data['merchant_email']}{order_data['currency']}{salt}"
+    for item in order_data['items']:
+        data += f"{item['pid']}{item['quantity']}{item['price']}"
+    data += str(order_data['total_price'])
+    
+    return hmac.new(
+        salt.encode(),
+        data.encode(),
+        hashlib.sha256
+    ).hexdigest()
 
 
 if __name__ == "__main__":

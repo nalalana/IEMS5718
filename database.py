@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import urllib
 import pyodbc
 
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
@@ -78,5 +78,26 @@ def get_password_hash(password):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    
+    orderid = Column(Integer, primary_key=True, index=True)
+    userid = Column(Integer, ForeignKey("users.id"))
+    status = Column(String(50), default="pending")  # pending, paid, completed, cancelled
+    total_price = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    digest = Column(String(255))
+    paypal_transaction_id = Column(String(255), nullable=True)
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    orderid = Column(Integer, ForeignKey("orders.orderid"))
+    pid = Column(Integer, ForeignKey("products.pid"))
+    quantity = Column(Integer)
+    price = Column(Float)  # 记录购买时的价格
 
 

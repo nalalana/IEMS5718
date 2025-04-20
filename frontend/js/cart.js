@@ -87,18 +87,23 @@ export function updateCartDisplay() {
     const cartList = document.querySelector(".shopping-cart ul");
     const totalElement = document.querySelector(".shopping-cart h2");
 
-    if (!cartList || !totalElement) return; // 兼容不同页面的DOM结构
+    if (!cartList || !totalElement) return;
 
     cartList.innerHTML = "";
+    let itemNumber = 1;
 
     cart.items.forEach(item => {
         const li = document.createElement("li");
         li.innerHTML = `
             <span class="name">${item.name}</span>
             <span class="price">@$${item.price.toFixed(2)}</span>
+            <input type="hidden" name="item_name_${itemNumber}" value="${item.name}">
+            <input type="hidden" name="amount_${itemNumber}" value="${item.price.toFixed(2)}">
+            <input type="hidden" name="quantity_${itemNumber}" value="${item.quantity}">
         `;
         li.append(createQuantityControls(item.pid, item.quantity));
         cartList.appendChild(li);
+        itemNumber++;
     });
 
     const total = cart.calculateTotal();

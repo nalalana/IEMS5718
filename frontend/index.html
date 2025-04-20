@@ -47,8 +47,16 @@
 
     <aside class="shopping-cart">
         <h2>Shopping Cart ($0.00)</h2>
-        <ul></ul>
-        <button class="checkout">Checkout</button>
+        <form id="checkout-form" action="https://www.sandbox.paypal.com/cgi-bin/webscr" method="post">
+            <input type="hidden" name="cmd" value="_cart">
+            <input type="hidden" name="upload" value="1">
+            <input type="hidden" name="business" value="sb-61qba40343014@business.example.com">
+            <input type="hidden" name="charset" value="utf-8">
+            <input type="hidden" name="currency_code" value="USD">
+            <input type="hidden" name="custom" id="order-digest">
+            <ul></ul>
+            <button type="submit" class="checkout">Checkout</button>
+        </form>
     </aside>
 
     <footer>
@@ -195,5 +203,46 @@
 
     </script>
 
+    // 添加结账处理函数
+    async function handleCheckout(event) {
+        event.preventDefault();
+        
+        try {
+            // 获取购物车商品信息
+            const cartItems = Array.from(cart.items.values()).map(item => ({
+                pid: item.pid,
+                quantity: item.quantity
+            }));
+            
+            // 发送到服务器生成订单
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ items: cartItems })
+            });
+            
+            if (!response.ok) {
+                throw new Error('订单创建失败');
+            }
+            
+            const orderData = await response.json();
+            
+            // 设置订单摘要
+            document.getElementById('order-digest').value = orderData.digest;
+            
+            // 提交表单到PayPal
+            event.target.submit();
+            
+        } catch (error) {
+            console.error('结账失败:', error);
+            alert('结账过程中出现错误，请稍后重试');
+        }
+    }
+    
+    // 绑定结账事件
+    document.getElementById('checkout-form').addEventListener('submit', handleCheckout);
+</script>
 </body>
 </html>
