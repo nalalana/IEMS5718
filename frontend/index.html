@@ -92,7 +92,6 @@
     <footer>
         <p>&copy; 2025 Dummy Shopping</p>
     </footer>
-
     <script>
         function getCategoryIdFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -185,10 +184,21 @@
                             }
                         })
 
+                        // let facebookLikeButton = document.createElement("div")
+                        // facebookLikeButton.classList.add("fb-like")
+                        // facebookLikeButton.setAttribute("data-href", window.location.href)
+                        // facebookLikeButton.setAttribute("data-layout", "button_count")
+                        // facebookLikeButton.setAttribute("data-size", "small")
+                        // facebookLikeButton.setAttribute("data-mobile-iframe", "true")
+                        // facebookLikeButton.setAttribute("data-show-faces", "false")
+                        // facebookLikeButton.setAttribute("data-share", "true")
+                        
+                        
+
                         productItem.appendChild(productLink);
                         productItem.appendChild(productPrice);
                         productItem.appendChild(addToCartButton);
-
+                        // productItem.appendChild(facebookLikeButton);
                         productsContainer.appendChild(productItem);
                     });
 

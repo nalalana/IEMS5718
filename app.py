@@ -439,6 +439,14 @@ def get_products_by_category(catid: int, page: int = 1, page_size: int = 6, db: 
         "total_pages": (total + page_size - 1) // page_size
     }
 
+@app.get("/api/all-products/category/{catid}")
+def get_all_products_by_category(catid: int, db: Session = Depends(get_db)):
+
+    # 获取分页数据，添加ORDER BY子句
+    products = db.query(Product).filter(Product.catid == catid).order_by(Product.pid).all()
+    
+    return products
+
 
 # 简易 session 存储：建议后期替换为 Redis 或数据库
 session_store = {}
