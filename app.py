@@ -1,5 +1,7 @@
 import os
+import random
 import secrets
+import string
 import uuid
 from shutil import copyfileobj
 import hmac
@@ -7,6 +9,7 @@ import hashlib
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Response, Cookie
 from fastapi import Form
+import httpx
 from sqlalchemy.orm import Session
 from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.staticfiles import StaticFiles
@@ -418,8 +421,23 @@ def get_details(pid: int, db: Session = Depends(get_db)):
     return {"error": "Product not found"}
 
 @app.get("/api/products/category/{catid}")
-def get_products_by_category(catid: int, db: Session = Depends(get_db)):
-    return db.query(Product).filter(Product.catid == catid).all()
+def get_products_by_category(catid: int, page: int = 1, page_size: int = 6, db: Session = Depends(get_db)):
+    # 计算偏移量
+    offset = (page - 1) * page_size
+    
+    # 获取总记录数
+    total = db.query(Product).filter(Product.catid == catid).count()
+    
+    # 获取分页数据，添加ORDER BY子句
+    products = db.query(Product).filter(Product.catid == catid).order_by(Product.pid).offset(offset).limit(page_size).all()
+    
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size
+    }
 
 
 # 简易 session 存储：建议后期替换为 Redis 或数据库
