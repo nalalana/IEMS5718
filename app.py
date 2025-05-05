@@ -170,13 +170,20 @@ def admin_order_list(db: Session = Depends(get_db), user=Depends(get_current_use
 
     return HTMLResponse(content=html_template, media_type="text/html")
 
+@app.get("/search_orders", response_class=HTMLResponse)
+async def search_orders(request: Request):
+    with open("frontend/search_orders.html", "r", encoding="utf-8") as f:
+        html = f.read()
+    return HTMLResponse(content=html, media_type="text/html")
 
 @app.get("/success")
 def payment_success(request: Request):
     payer_id = request.query_params.get("PayerID", "Unavailable")
+    order_id = request.query_params.get("Custom", "Unavailable")
+    print("request", request.query_params)
 
     with open("frontend/success.html", "r", encoding="utf-8") as f:
-        html = f.read().replace("{{PAYER_ID}}", payer_id)
+        html = f.read().replace("{{ORDER_ID}}", order_id).replace("{{PAYER_ID}}", payer_id)
 
     return HTMLResponse(content=html, media_type="text/html")
 
@@ -495,7 +502,7 @@ async def login(request: Request, response: Response,
 
     db_user = db.query(User).filter(User.email == user.email).first()
     db.close()
-
+    print("db_user", db_user.id)
     if not db_user or not verify_password(user.password, db_user.password):
         return {"error": "Invalid email or password"}
 
@@ -680,8 +687,11 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
     data = await request.json()
     items = data.get("items", [])  # [{pid, quantity}]
     userid = data.get("userid")  # None if guest
-    token_key = user["id"] if user else "guest"
+    token_key = user["id"] if user else 6
     csrf_token = generate_csrf_token(token_key)
+
+    if token_key == -1:
+        raise HTTPException(status_code=401, detail="Please login first")
 
     if not items:
         raise HTTPException(status_code=400, detail="Cart is empty")
@@ -736,7 +746,7 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
         "charset": "utf-8",
         "invoice": str(order.orderid),
         "custom": custom,
-        "return": "http://127.0.0.1:8000/success",
+        "return": "http://127.0.0.1:8000/success?Custom=" + custom,
         "cancel_return": "http://127.0.0.1:8000/cancel",
     }
     for i, (pid, p) in enumerate(product_map.items(), start=1):
@@ -747,8 +757,44 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
 
     return JSONResponse({
         "paypal_url": "https://www.sandbox.paypal.com/cgi-bin/webscr",
-        "params": params
+        "params": params,
+        "orderid": order.orderid
     })
+
+@app.post("/api/search_order")
+async def api_search_order(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    custom = data.get("order_id")
+    order = db.query(Order).filter(Order.digest == custom).first()
+    order_id = order.orderid
+    items = db.query(OrderItem).filter(OrderItem.orderid == order_id).all()
+    product_map = {}
+    print("items", items[0].pid)
+    for item in items:
+        product = db.query(Product).filter(Product.pid == item.pid).first()
+        print("product", product.name)
+        product_map[str(item.pid)] = product.name
+    print("product_map", product_map)
+    if order:
+        order_dict = {
+            "custom": order.digest,
+            "status": order.status,
+            "total_price": float(order.total_price),
+            "created_at": order.created_at.isoformat() if order.created_at else None,
+            "userid": order.userid,
+            "paypal_transaction_id": order.paypal_transaction_id,
+            "items": [
+                {
+                    "product": product_map[str(item.pid)],
+                    "quantity": item.quantity,
+                    "price": item.price
+                }
+                for item in items
+            ]
+        }
+
+        return JSONResponse({"order": order_dict})
+    return JSONResponse({"order": None})
 
 if __name__ == "__main__":
     import uvicorn

@@ -177,6 +177,11 @@ document.querySelector(".checkout")?.addEventListener("click", async (e) => {
             })
         });
 
+        if (res.status === 401) {
+            alert("Please login first");
+            return;
+        }
+
         if (!res.ok) throw new Error("Checkout failed");
 
         const { paypal_url, params } = await res.json();
@@ -200,6 +205,10 @@ document.querySelector(".checkout")?.addEventListener("click", async (e) => {
         form.submit();
     } catch (err) {
         console.error(err);
+        if (err.status === 401) {
+            alert("Please login first");
+            return;
+        }
         alert("Checkout error.");
     }
 });

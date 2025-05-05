@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dummy Shopping Site</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .order-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        /* 缺少加载状态的样式 */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* 缺少错误提示的样式 */
+        .error-message {
+            color: red;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .order-block {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .search-form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Search Orders</h1>
+    </header>
+
+    <div class="container">
+
+        <form id="search-form">
+            <input type="text" name="order_id" placeholder="OrderID">
+            <button type="submit">Search</button>
+        </form>
+
+        <main class="main-content">
+            <section class="order-list" id="order-list">
+                <!-- Orders will be loaded dynamically -->
+            </section>
+        </main>
+    </div>
+
+
+    <footer>
+        <p>&copy; 2025 Dummy Shopping</p>
+    </footer>
+    <script>
+        async function loadOrders(orderId) {
+            try {
+                const response = await fetch("/api/search_order", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order_id: orderId })
+                });
+                const data = await response.json();
+                const orderList = document.getElementById("order-list");
+                if (data.order) {
+                    orderList.innerHTML = `
+                        <div class="order-block">
+                            <p><b>OrderID:</b> ${data.order.orderid}</p>
+                            <p><b>Status:</b> ${data.order.status}</p>
+                            <p><b>Total:</b> $${data.order.total_price}</p>
+                            <p><b>Time:</b> ${new Date(data.order.created_at).toLocaleString()}</p>
+                            <p><b>Items:</b> ${data.order.items.map(item => `${item.product} x ${item.quantity} @ $${item.price}`).join(", ")}</p>
+                        </div>
+                    `;
+                } else {
+                    orderList.innerHTML = "<p>No order found</p>";
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById("order-list").innerHTML = "<p>Error loading order</p>";
+            }
+        }
+
+        document.getElementById("search-form").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const orderId = this.querySelector('input[name="order_id"]').value;
+            loadOrders(orderId);
+        });
+
+        function renderOrder(order) {
+            return `
+                <div class="order-item">
+                    <h3>订单ID: ${order.orderid}</h3>
+                    <p>支付者ID: ${order.payer_id}</p>
+                    <p>总金额: $${order.total_price}</p>
+                    <p>状态: ${order.status}</p>
+                    <p>创建时间: ${order.created_at}</p>
+                </div>
+            `;
+        }
+
+        let currentPage = 1;
+        const pageSize = 10;
+
+        function updatePagination(total) {
+            const totalPages = Math.ceil(total / pageSize);
+            // 缺少分页UI的更新逻辑
+        }
+
+        function showLoading() {
+            // 显示加载中状态
+        }
+
+        function hideLoading() {
+            // 隐藏加载中状态
+        }
+
+        function getSearchParams() {
+            const params = new URLSearchParams();
+            const payerId = document.querySelector('input[name="payer_id"]').value;
+            if (payerId) {
+                params.append('payer_id', payerId);
+            }
+            return params;
+        }
+    </script>
+
+    
+</body>
+</html>
