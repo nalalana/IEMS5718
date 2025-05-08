@@ -746,7 +746,7 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
         "charset": "utf-8",
         "invoice": str(order.orderid),
         "custom": custom,
-        "return": "http://s38.iems5718.ie.cuhk.edu.hk/success",
+        "return": "http://s38.iems5718.ie.cuhk.edu.hk/success?Custom=" + custom,
         "cancel_return": "http://s38.iems5718.ie.cuhk.edu.hk/cancel",
     }
     for i, (pid, p) in enumerate(product_map.items(), start=1):
