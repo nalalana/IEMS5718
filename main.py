@@ -710,8 +710,8 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
         "charset": "utf-8",
         "invoice": str(order.orderid),
         "custom": custom,
-        "return": "http://127.0.0.1:8000/success",
-        "cancel_return": "http://127.0.0.1:8000/cancel",
+        "return": "http://s38.iems5718.ie.cuhk.edu.hk/success",
+        "cancel_return": "http://s38.iems5718.ie.cuhk.edu.hk/cancel",
     }
     for i, (pid, p) in enumerate(product_map.items(), start=1):
         params[f"item_name_{i}"] = p["name"]
