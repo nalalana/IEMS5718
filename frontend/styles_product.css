@@ -84,10 +84,6 @@ nav ul li a {
     text-align: center;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     width: calc(33.33% - 45px);
-    position: relative;
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
 }
 
 .product img {
@@ -99,11 +95,6 @@ nav ul li a {
 .product a {
     color: black;
     text-decoration: none;
-    flex: 1;
-}
-
-.product p {
-    margin: 10px 0;
 }
 
 .add-to-cart {
@@ -112,15 +103,6 @@ nav ul li a {
     border: none;
     padding: 10px;
     cursor: pointer;
-    width: calc(100% - 30px);
-    max-width: 200px;
-    margin: 10px auto;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-}
-
-.add-to-cart:hover {
-    background-color: #218838;
 }
 
 /* 购物车容器样式 */
@@ -249,6 +231,8 @@ nav ul li a {
 .shopping-cart:hover .checkout {
     display: block; /* 确保结账按钮在展开时可见 */
 }
+
+
 
 footer {
     background-color: #333;
