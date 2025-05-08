@@ -746,8 +746,8 @@ async def checkout(request: Request, db: Session = Depends(get_db), user=Depends
         "charset": "utf-8",
         "invoice": str(order.orderid),
         "custom": custom,
-        "return": "http://127.0.0.1:8000/success?Custom=" + custom,
-        "cancel_return": "http://127.0.0.1:8000/cancel",
+        "return": "http://s38.iems5718.ie.cuhk.edu.hk/success?Custom=" + custom,
+        "cancel_return": "http://s38.iems5718.ie.cuhk.edu.hk/cancel",
     }
     for i, (pid, p) in enumerate(product_map.items(), start=1):
         params[f"item_name_{i}"] = p["name"]
@@ -766,6 +766,8 @@ async def api_search_order(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     custom = data.get("order_id")
     order = db.query(Order).filter(Order.digest == custom).first()
+    if not order:
+        return JSONResponse({"order": None})
     order_id = order.orderid
     items = db.query(OrderItem).filter(OrderItem.orderid == order_id).all()
     product_map = {}
@@ -777,7 +779,7 @@ async def api_search_order(request: Request, db: Session = Depends(get_db)):
     print("product_map", product_map)
     if order:
         order_dict = {
-            "custom": order.digest,
+            "orderid": order.digest,
             "status": order.status,
             "total_price": float(order.total_price),
             "created_at": order.created_at.isoformat() if order.created_at else None,

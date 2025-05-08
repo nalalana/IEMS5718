@@ -766,6 +766,8 @@ async def api_search_order(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     custom = data.get("order_id")
     order = db.query(Order).filter(Order.digest == custom).first()
+    if not order:
+        return JSONResponse({"order": None})
     order_id = order.orderid
     items = db.query(OrderItem).filter(OrderItem.orderid == order_id).all()
     product_map = {}
@@ -775,26 +777,26 @@ async def api_search_order(request: Request, db: Session = Depends(get_db)):
         print("product", product.name)
         product_map[str(item.pid)] = product.name
     print("product_map", product_map)
-    if order:
-        order_dict = {
-            "custom": order.digest,
-            "status": order.status,
-            "total_price": float(order.total_price),
-            "created_at": order.created_at.isoformat() if order.created_at else None,
-            "userid": order.userid,
-            "paypal_transaction_id": order.paypal_transaction_id,
-            "items": [
-                {
-                    "product": product_map[str(item.pid)],
-                    "quantity": item.quantity,
-                    "price": item.price
-                }
-                for item in items
-            ]
-        }
 
-        return JSONResponse({"order": order_dict})
-    return JSONResponse({"order": None})
+    order_dict = {
+        "orderid": order.digest,
+        "status": order.status,
+        "total_price": float(order.total_price),
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+        "userid": order.userid,
+        "paypal_transaction_id": order.paypal_transaction_id,
+        "items": [
+            {
+                "product": product_map[str(item.pid)],
+                "quantity": item.quantity,
+                "price": item.price
+            }
+            for item in items
+        ]
+    }
+
+    return JSONResponse({"order": order_dict})
+
 
 if __name__ == "__main__":
     import uvicorn
